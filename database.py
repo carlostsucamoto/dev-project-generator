@@ -57,3 +57,13 @@ def criar_tabelas(conexao):
     """
     cursor.execute(ideias_linguagens)
     conexao.commit()
+    estudos = """
+        CREATE TABLE IF NOT EXISTS estudos (
+        id_estudos INTEGER primary key,
+        id_bibliotecas_id INTEGER NOT NULL,
+        FOREIGN KEY (id_bibliotecas_id) REFERENCES bibliotecas (id_biblioteca)
+
+        );
+    """
+    cursor.execute(estudos)
+    conexao.commit()
