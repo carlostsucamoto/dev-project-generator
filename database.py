@@ -13,7 +13,7 @@ def abrir_conexao(ideias_db):
 def criar_tabelas(conexao):
     cursor = conexao.cursor()
     linguagens = """
-        CREATE TABLE linguagens (
+        CREATE TABLE IF NOT EXISTS linguagens  (
         id_linguagem INTEGER primary key,
         nome_linguagem VARCHAR NOT NULL,
         domina BOOLEAN NOT NULL
@@ -23,7 +23,7 @@ def criar_tabelas(conexao):
     conexao.commit()
 
     bibliotecas = """
-        CREATE TABLE bibliotecas (
+        CREATE TABLE IF NOT EXISTS bibliotecas (
         id_biblioteca INTEGER primary key,
         id_linguagem_id INTEGER NOT NULL,
         nome_biblioteca VARCHAR NOT NULL,
@@ -35,7 +35,7 @@ def criar_tabelas(conexao):
     conexao.commit()
 
     ideias = """
-        CREATE TABLE ideias (
+        CREATE TABLE IF NOT EXISTS ideias (
         id_ideias INTEGER primary key,
         nome_ideias VARCHAR NOT NULL,
         descricao VARCHAR NOT NULL,
@@ -47,7 +47,7 @@ def criar_tabelas(conexao):
     conexao.commit()
 
     ideias_linguagens = """
-        CREATE TABLE ideias_linguagens (
+        CREATE TABLE IF NOT EXISTS ideias_linguagens (
         id_ideias_linguagens INTEGER primary key,
         id_linguagem_id INTEGER NOT NULL,
         id_ideias_id INTEGER NOT NULL,
