@@ -6,10 +6,10 @@ def sortear(conexao, categoria, dificuldade):
     cursor = conexao.cursor()
     cursor.execute("SELECT * FROM ideias WHERE categoria = ? AND dificuldade = ?", (categoria, dificuldade))
     resultados = cursor.fetchall()
+    if not resultados:
+        return None
     sorteio = random.choice(resultados)
     return sorteio
-if __name__ == "__main__":
-    sortear()
 
 def listar_linguagem(conexao):
     cursor = conexao.cursor()
@@ -26,5 +26,7 @@ def listar_bibliotecas(conexao, id_linguagem):
 def adicionar_ideias(conexao, nome_ideias, descricao, categoria, dificuldade):
     cursor = conexao.cursor()
     cursor.execute("INSERT INTO ideias (nome_ideias, descricao, categoria, dificuldade) VALUES (?, ?, ?, ?)", (nome_ideias, descricao, categoria, dificuldade))
-    resultados = conexao.commit()
-    return resultados
+    conexao.commit()
+
+if __name__ == "__main__":
+    pass
