@@ -1,17 +1,17 @@
 import dash
-from dash import dcc, html, Input, Output
+from dash import dcc, html, Input, Output, State, dash_table
 import plotly.express as px
 from database import abrir_conexao
 from queries import sortear, listar_linguagem, listar_bibliotecas, adicionar_ideias
 
-app = dash.Dash(__name__)
+app = dash.Dash(__name__, suppress_callback_exceptions=True)
 
 app.index_string = '''
 <!DOCTYPE html>
 <html>
     <head>
         {%metas%}
-        <title>Dev Project Generator</title>
+        <title>Gerador de Projetos</title>
         {%favicon%}
         {%css%}
         <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
@@ -23,7 +23,7 @@ app.index_string = '''
                 font-family: 'Syne', sans-serif;
                 min-height: 100vh;
                 background-image: radial-gradient(ellipse at 20% 20%, #051533 0%, transparent 50%),
-                                  radial-gradient(ellipse at 80% 80%, #020d24 0%, transparent 50%);
+                radial-gradient(ellipse at 80% 80%, #020d24 0%, transparent 50%);
             }
             .header {
                 padding: 48px 64px 32px;
@@ -43,6 +43,27 @@ app.index_string = '''
                 font-size: 13px;
                 margin-top: 8px;
             }
+            .tabs-container {
+                padding: 0 64px;
+                border-bottom: 1px solid rgba(255,255,255,0.06);
+                display: flex;
+                gap: 32px;
+            }
+            .tab-btn {
+                background: none;
+                border: none;
+                color: rgba(255,255,255,0.4);
+                font-family: 'Space Mono', monospace;
+                font-size: 12px;
+                text-transform: uppercase;
+                letter-spacing: 2px;
+                padding: 16px 0;
+                cursor: pointer;
+                border-bottom: 2px solid transparent;
+                transition: all 0.2s;
+            }
+            .tab-btn:hover { color: #e0e0ff; }
+            .tab-btn.active { color: #60a5fa; border-bottom: 2px solid #60a5fa; }
             .main {
                 padding: 48px 64px;
                 max-width: 1400px;
@@ -93,14 +114,22 @@ app.index_string = '''
                 letter-spacing: 3px;
                 margin-bottom: 16px;
             }
+            
             .filters-row {
-                display: grid;
-                grid-template-columns: 1fr 1fr auto;
+                display: flex;
+                flex-wrap: wrap;
                 gap: 16px;
-                align-items: end;
+                align-items: flex-end;
                 margin-bottom: 40px;
             }
-            .filter-group { display: flex; flex-direction: column; gap: 8px; }
+            .filter-group { 
+                display: flex; 
+                flex-direction: column; 
+                gap: 8px; 
+                flex: 1; 
+                min-width: 250px; 
+            }
+
             .resultado-card {
                 background: rgba(255,255,255,0.03);
                 border: 1px solid rgba(255,255,255,0.08);
@@ -134,7 +163,7 @@ app.index_string = '''
                 line-height: 1.7;
                 margin-bottom: 24px;
             }
-            .badges { display: flex; gap: 10px; }
+            .badges { display: flex; gap: 10px; margin-bottom: 20px; }
             .badge {
                 font-family: 'Space Mono', monospace;
                 font-size: 11px;
@@ -145,6 +174,7 @@ app.index_string = '''
             }
             .badge-cat { background: rgba(167,139,250,0.15); color: #a78bfa; border: 1px solid rgba(167,139,250,0.3); }
             .badge-dif { background: rgba(52,211,153,0.15); color: #34d399; border: 1px solid rgba(52,211,153,0.3); }
+            .badge-prog { background: rgba(251,191,36,0.15); color: #fbbf24; border: 1px solid rgba(251,191,36,0.3); }
             .graficos-row {
                 display: grid;
                 grid-template-columns: 1fr 1fr;
@@ -164,12 +194,7 @@ app.index_string = '''
                 padding: 24px;
                 margin-bottom: 48px;
             }
-            table {
-                width: 100%;
-                border-collapse: collapse;
-                font-family: 'Space Mono', monospace;
-                font-size: 13px;
-            }
+            table { width: 100%; border-collapse: collapse; font-family: 'Space Mono', monospace; font-size: 13px; }
             th {
                 color: rgba(255,255,255,0.4);
                 text-align: left;
@@ -179,53 +204,98 @@ app.index_string = '''
                 letter-spacing: 2px;
                 font-size: 11px;
             }
-            td {
-                padding: 12px 16px;
-                color: #e0e0ff;
-                border-bottom: 1px solid rgba(255,255,255,0.04);
-            }
+            td { padding: 12px 16px; color: #e0e0ff; border-bottom: 1px solid rgba(255,255,255,0.04); }
             tr:hover td { background: rgba(255,255,255,0.02); }
+            .form-card {
+                background: rgba(255,255,255,0.03);
+                border: 1px solid rgba(255,255,255,0.08);
+                border-radius: 20px;
+                padding: 36px;
+                margin-bottom: 48px;
+            }
+            .form-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 20px;
+                margin-bottom: 20px;
+            }
+            .form-group { display: flex; flex-direction: column; gap: 8px; }
+            .form-input {
+                background: rgba(255,255,255,0.05);
+                border: 1px solid rgba(255,255,255,0.1);
+                border-radius: 10px;
+                padding: 10px 16px;
+                color: #e0e0ff;
+                font-family: 'Syne', sans-serif;
+                font-size: 14px;
+                outline: none;
+            }
+            .form-input:focus { border-color: #60a5fa; }
+            .form-textarea {
+                background: rgba(255,255,255,0.05);
+                border: 1px solid rgba(255,255,255,0.1);
+                border-radius: 10px;
+                padding: 10px 16px;
+                color: #e0e0ff;
+                font-family: 'Syne', sans-serif;
+                font-size: 14px;
+                outline: none;
+                resize: vertical;
+                min-height: 100px;
+            }
+            .form-textarea:focus { border-color: #60a5fa; }
+            .btn-primary {
+                background: linear-gradient(135deg, #1d4ed8, #2563eb);
+                border: none;
+                color: #fff;
+                padding: 12px 32px;
+                border-radius: 10px;
+                font-size: 15px;
+                font-weight: 700;
+                font-family: 'Syne', sans-serif;
+                cursor: pointer;
+                letter-spacing: 0.5px;
+            }
+            .btn-sortear {
+                background: linear-gradient(135deg, #1d4ed8, #2563eb);
+                border: none;
+                color: #fff;
+                padding: 12px 32px;
+                border-radius: 10px;
+                font-size: 15px;
+                font-weight: 700;
+                font-family: 'Syne', sans-serif;
+                cursor: pointer;
+                letter-spacing: 0.5px;
+                height: 42px;
+                min-width: 150px;
+            }
+            .sucesso { color: #34d399; font-family: 'Space Mono', monospace; font-size: 13px; margin-top: 16px; }
             
-            .dark-dropdown .Select-control {
-                background-color: #051533 !important;
-                border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            /* --- CSS DROPDOWN --- */
+            .Select-control {
+                background-color: #ffffff !important;
                 border-radius: 10px !important;
+                height: 42px !important;
+                border: none !important;
             }
-            .dark-dropdown .is-focused > .Select-control,
-            .dark-dropdown .is-open > .Select-control {
-                background-color: #051533 !important;
-                border-color: #a78bfa !important;
-                box-shadow: 0 0 0 1px rgba(167, 139, 250, 0.5) !important;
-            }
-            .dark-dropdown .Select-value-label,
-            .dark-dropdown .has-value.Select--single > .Select-control .Select-value .Select-value-label,
-            .dark-dropdown .Select-value-label[role="option"] {
-                color: #e0e0ff !important;
+            .Select-value-label, .Select-value {
+                color: #000000 !important;
                 font-weight: 700 !important;
             }
-            .dark-dropdown .Select-input > input {
-                color: #e0e0ff !important;
+            .Select-placeholder { color: #64748b !important; }
+            .Select-input > input { color: #000000 !important; }
+            .Select-menu-outer {
+                background-color: #ffffff !important;
+                border: 1px solid rgba(0,0,0,0.2) !important;
             }
-            .dark-dropdown .Select-placeholder {
-                color: rgba(255, 255, 255, 0.4) !important;
+            .Select-option {
+                background-color: #ffffff !important;
+                color: #000000 !important;
+                font-weight: 600 !important;
             }
-            .dark-dropdown .Select-menu-outer {
-                background-color: #0d1b3e !important;
-                border: 1px solid rgba(255, 255, 255, 0.1) !important;
-                border-radius: 10px !important;
-                margin-top: 4px;
-            }
-            .dark-dropdown .Select-option {
-                background-color: #0d1b3e !important;
-                color: #e0e0ff !important;
-            }
-            .dark-dropdown .Select-option:hover,
-            .dark-dropdown .Select-option.is-focused {
-                background-color: rgba(96, 165, 250, 0.2) !important;
-            }
-            .dark-dropdown .Select-arrow,
-            .dark-dropdown .Select-clear {
-                color: rgba(255, 255, 255, 0.5) !important;
+            .Select-option.is-focused, .Select-option:hover {
+                background-color: #f1f5f9 !important;
             }
         </style>
     </head>
@@ -258,15 +328,9 @@ def get_grafico_dificuldade():
     dados = cursor.fetchall()
     labels = [d[0] for d in dados]
     values = [d[1] for d in dados]
-    fig = px.pie(
-        names=labels,
-        values=values,
-        color_discrete_sequence=["#a78bfa", "#60a5fa", "#34d399"],
-        hole=0.5
-    )
+    fig = px.pie(names=labels, values=values, color_discrete_sequence=["#a78bfa", "#60a5fa", "#34d399"], hole=0.5)
     fig.update_layout(
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
         font={"color": "#e0e0ff", "family": "Space Mono"},
         legend={"font": {"color": "#e0e0ff"}},
         margin={"t": 20, "b": 20, "l": 20, "r": 20}
@@ -280,15 +344,9 @@ def get_grafico_categoria():
     dados = cursor.fetchall()
     labels = [d[0] for d in dados]
     values = [d[1] for d in dados]
-    fig = px.bar(
-        x=labels,
-        y=values,
-        color=labels,
-        color_discrete_sequence=["#a78bfa", "#60a5fa", "#34d399"],
-    )
+    fig = px.bar(x=labels, y=values, color=labels, color_discrete_sequence=["#a78bfa", "#60a5fa", "#34d399"])
     fig.update_layout(
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
         font={"color": "#e0e0ff", "family": "Space Mono"},
         showlegend=False,
         margin={"t": 20, "b": 20, "l": 20, "r": 20},
@@ -307,11 +365,32 @@ total_ideias, total_linguagens, total_estudos = get_stats()
 
 app.layout = html.Div([
     html.Div([
-        html.H1("Dev Project Generator"),
+        html.H1("Gerador de Projetos"),
         html.P("// sorteia seu próximo projeto com base nos seus filtros")
     ], className="header"),
 
     html.Div([
+        html.Button("Dashboard", id="tab-dashboard", className="tab-btn active", n_clicks=0),
+        html.Button("Adicionar Ideia", id="tab-adicionar", className="tab-btn", n_clicks=0),
+    ], className="tabs-container"),
+
+    html.Div(id="tab-content", className="main")
+])
+
+@app.callback(
+    Output("tab-content", "children"),
+    Output("tab-dashboard", "className"),
+    Output("tab-adicionar", "className"),
+    Input("tab-dashboard", "n_clicks"),
+    Input("tab-adicionar", "n_clicks"),
+)
+def render_tab(n_dashboard, n_adicionar):
+    if (n_adicionar or 0) > (n_dashboard or 0):
+        return tab_adicionar(), "tab-btn", "tab-btn active"
+    return tab_dashboard(), "tab-btn active", "tab-btn"
+
+def tab_dashboard():
+    return html.Div([
         html.Div([
             html.Div([
                 html.Div("Ideias cadastradas", className="stat-label"),
@@ -338,7 +417,7 @@ app.layout = html.Div([
                         {"label": "Desafio", "value": "desafio"},
                     ],
                     placeholder="Selecione...",
-                    className="dark-dropdown"
+                    style={"color": "#000000", "backgroundColor": "#ffffff"}
                 ),
             ], className="filter-group"),
             html.Div([
@@ -351,23 +430,10 @@ app.layout = html.Div([
                         {"label": "Avançado", "value": "avançado"},
                     ],
                     placeholder="Selecione...",
-                    className="dark-dropdown"
+                    style={"color": "#000000", "backgroundColor": "#ffffff"}
                 ),
             ], className="filter-group"),
-            html.Button("→ Sortear", id="btn-sortear", style={
-                "background": "linear-gradient(135deg, #1d4ed8, #2563eb)",
-                "border": "none",
-                "color": "#fff",
-                "padding": "12px 32px",
-                "borderRadius": "10px",
-                "fontSize": "15px",
-                "fontWeight": "700",
-                "fontFamily": "Syne, sans-serif",
-                "cursor": "pointer",
-                "letterSpacing": "0.5px",
-                "height": "38px",
-                "alignSelf": "end"
-            }),
+            html.Button("→ Sortear", id="btn-sortear", className="btn-sortear"),
         ], className="filters-row"),
 
         html.Div(id="resultado"),
@@ -401,9 +467,53 @@ app.layout = html.Div([
                 ])
             ])
         ], className="tabela-card"),
+    ])
 
-    ], className="main")
-])
+def tab_adicionar():
+    return html.Div([
+        html.Div("// adicionar nova ideia", className="section-title"),
+        html.Div([
+            html.Div([
+                html.Div([
+                    html.Div("Nome do projeto", className="section-title"),
+                    dcc.Input(id="input-nome", placeholder="Ex: Sistema de login com JWT", className="form-input", style={"width": "100%"}),
+                ], className="form-group"),
+                html.Div([
+                    html.Div("Categoria", className="section-title"),
+                    dcc.Dropdown(
+                        id="input-categoria",
+                        options=[
+                            {"label": "Projeto", "value": "projeto"},
+                            {"label": "Desafio", "value": "desafio"},
+                        ],
+                        placeholder="Selecione...",
+                        style={"color": "#000000", "backgroundColor": "#ffffff"}
+                    ),
+                ], className="form-group"),
+            ], className="form-grid"),
+            html.Div([
+                html.Div([
+                    html.Div("Dificuldade", className="section-title"),
+                    dcc.Dropdown(
+                        id="input-dificuldade",
+                        options=[
+                            {"label": "Iniciante", "value": "iniciante"},
+                            {"label": "Intermediário", "value": "intermediario"},
+                            {"label": "Avançado", "value": "avançado"},
+                        ],
+                        placeholder="Selecione...",
+                        style={"color": "#000000", "backgroundColor": "#ffffff"}
+                    ),
+                ], className="form-group"),
+            ], className="form-grid"),
+            html.Div([
+                html.Div("Descrição", className="section-title"),
+                dcc.Textarea(id="input-descricao", placeholder="Descreva o projeto...", className="form-textarea", style={"width": "100%"}),
+            ], className="form-group", style={"marginBottom": "20px"}),
+            html.Button("+ Adicionar ideia", id="btn-adicionar", className="btn-primary"),
+            html.Div(id="msg-adicionar"),
+        ], className="form-card"),
+    ])
 
 @app.callback(
     Output("resultado", "children"),
@@ -430,6 +540,7 @@ def realizar_sortio(n_clicks, categoria, dificuldade):
             "marginBottom": "48px"
         })
     return html.Div([
+        html.Div("⚡ em destaque", className="badge badge-prog", style={"marginBottom": "16px", "display": "inline-block"}),
         html.Div(ideia[1], className="resultado-titulo"),
         html.Div(ideia[2], className="resultado-desc"),
         html.Div([
@@ -437,6 +548,22 @@ def realizar_sortio(n_clicks, categoria, dificuldade):
             html.Span(ideia[4], className="badge badge-dif"),
         ], className="badges")
     ], className="resultado-card")
+
+@app.callback(
+    Output("msg-adicionar", "children"),
+    Input("btn-adicionar", "n_clicks"),
+    State("input-nome", "value"),
+    State("input-descricao", "value"),
+    State("input-categoria", "value"),
+    State("input-dificuldade", "value"),
+    prevent_initial_call=True
+)
+def salvar_ideia(n_clicks, nome, descricao, categoria, dificuldade):
+    if not nome or not descricao or not categoria or not dificuldade:
+        return html.Div("Preencha todos os campos!", style={"color": "#f87171", "fontFamily": "Space Mono, monospace", "fontSize": "13px", "marginTop": "16px"})
+    conexao = abrir_conexao("ideias.db")
+    adicionar_ideias(conexao, nome, descricao, categoria, dificuldade)
+    return html.Div("✓ Ideia adicionada com sucesso!", className="sucesso")
 
 if __name__ == "__main__":
     app.run(debug=True)
