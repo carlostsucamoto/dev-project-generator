@@ -27,6 +27,9 @@ def adicionar_ideias(conexao, nome_ideias, descricao, categoria, dificuldade):
     cursor = conexao.cursor()
     cursor.execute("INSERT INTO ideias (nome_ideias, descricao, categoria, dificuldade) VALUES (?, ?, ?, ?)", (nome_ideias, descricao, categoria, dificuldade))
     conexao.commit()
-
+def marcar_realizado(conexao, id_ideia):
+    cursor = conexao.cursor()
+    cursor.execute("UPDATE ideias SET realizado = 1 WHERE id_ideias = ?", (id_ideia,))      
+    conexao.commit()
 if __name__ == "__main__":
     pass
